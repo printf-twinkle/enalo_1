@@ -54,8 +54,8 @@ class CreateUserView(APIView):
 
 
 class ProfileView(APIView):
-    # authentication_class = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
+    authentication_class = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = model_to_dict(request.user)
