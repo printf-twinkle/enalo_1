@@ -8,12 +8,17 @@ from rest_framework.response import Response
 from .models import CustomUser
 from django.forms.models import model_to_dict
 from django.contrib.auth.hashers import make_password
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.views.decorators.csrf import csrf_exempt
+
 
 class CreateUserView(APIView):
+    permission_classes = (AllowAny, )
+    @csrf_exempt
     def post(self, request):
         data = request.data
+        print(data)
         the_email = data.get("email")
         first_name = data.get("firstName")
         last_name = data.get("lastName")
@@ -26,10 +31,9 @@ class CreateUserView(APIView):
         student_id = data.get("studentId")
         sub1_score = data.get("sub1Score")
         sub2_score = data.get("sub2Score")
-        try:
-            print("yes")
-            if not CustomUser.objects.filter(username=the_email).exists():
-                user = CustomUser(
+        user = CustomUser()
+        if not CustomUser.objects.filter(username=the_email).exists():
+            user = CustomUser(
                     first_name=first_name,
                     last_name=last_name,
                     username=the_email,
@@ -41,16 +45,18 @@ class CreateUserView(APIView):
                     student_id=student_id,
                     year_of_admission=year_of_admission,
                     year_of_passing=year_of_passing,
-                    sub1_score = sub1_score,
-                    sub2_score = sub2_score
-                )
-                user.save()
-                print(user)
-                user = model_to_dict(user)
-                del user["password"]
-        except:
-            return Response({"ok":False, "message": "email(user) already exists!!"}, status=403)
-        return Response({"ok": True, "message": "User created and membershipID sent successfully!", "user": user})
+                    # sub1_score = sub1_score,
+                    # sub2_score = sub2_score
+            )
+            user.save()
+            print(user)
+            token = user.token
+            user = model_to_dict(user)
+            del user["password"]
+            return Response({"ok": True, "message": "User created and membershipID sent successfully!", "user": user, "token": token,})
+        else:
+            return Response({"ok":False, "message": "email(user) already exists!!"}, status=409)
+        
 
 
 class ProfileView(APIView):
