@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import CustomUser
 from django.forms.models import model_to_dict
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import check_password, make_password
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.views.decorators.csrf import csrf_exempt
@@ -15,7 +15,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 class CreateUserView(APIView):
     permission_classes = (AllowAny, )
-    @csrf_exempt
     def post(self, request):
         data = request.data
         print(data)
@@ -29,9 +28,6 @@ class CreateUserView(APIView):
         year_of_admission = data.get("yearOfAdmission")
         year_of_passing = data.get("yearOfPassing")
         student_id = data.get("studentId")
-        sub1_score = data.get("sub1Score")
-        sub2_score = data.get("sub2Score")
-        user = CustomUser()
         if not CustomUser.objects.filter(username=the_email).exists():
             user = CustomUser(
                     first_name=first_name,
@@ -45,8 +41,6 @@ class CreateUserView(APIView):
                     student_id=student_id,
                     year_of_admission=year_of_admission,
                     year_of_passing=year_of_passing,
-                    # sub1_score = sub1_score,
-                    # sub2_score = sub2_score
             )
             user.save()
             print(user)
@@ -57,11 +51,23 @@ class CreateUserView(APIView):
         else:
             return Response({"ok":False, "message": "email(user) already exists!!"}, status=409)
         
-
+class LoginView(APIView):
+    permission_classes = (AllowAny, )
+    def post(self,request):
+        email = request.data.get("email")
+        password = request.data.get("password")
+        if CustomUser.objects.filter(username=email).exists():
+            user = CustomUser.objects.get(username=email)
+            if check_password(password, user.password):
+                return Response({"user":model_to_dict(user), "token":user.token}, status =200)
+            else:
+                return Response({"message":"Invalid credentials"}, status=401)
+        else:
+            return Response({"message":"Invalid credentials"}, status=401)
 
 class ProfileView(APIView):
-    # authentication_class = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
+    authentication_class = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = model_to_dict(request.user)
@@ -69,8 +75,8 @@ class ProfileView(APIView):
         return Response({"ok": True, "userData": user})
 
 class ProfileUpdate(APIView):
-    # authentication_class = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
+    authentication_class = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         data = request.data
         email = data.get("email")
@@ -106,8 +112,8 @@ class ProfileUpdate(APIView):
         return Response({"ok": True, "message": "Profile updated"})
 
 class ProfileDelete(APIView):
-    # authentication_class = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
+    authentication_class = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         data = request.data
         email = data.get('email')
@@ -119,3 +125,4 @@ class ProfileDelete(APIView):
         except:
             return Response({"ok": False, "message": "Profile could not be deleted"})
         return Response({"ok": True, "message": "Profile could be deleted"})
+
